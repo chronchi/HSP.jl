@@ -27,9 +27,7 @@ end
 """
     load_parameters(path_to_parameters::String; kwargs...)
 
-path_to_parameters is the path to the file (CSV) containing the parameters.
-Pass as argument header = 1 if the file has a header. To define a delimiter,
-pass as argument delim = 'd', where d is the delimiter.
+Load the table with parameters for the current problem.
 """
 function load_parameters(path_to_parameters::String; kwargs...)
     # defining parameters
@@ -45,7 +43,10 @@ function load_parameters(path_to_parameters::String; kwargs...)
     # load the file with the parameters as a DataFrame
     df = CSV.read(path_to_parameters, header=header, delim=delim; kwargs...)
     # add the values to HansenParameters
-    HansenParameters(df[:,1], df[:,2], df[:,3], df[:,4])
+    HansenParameters(convert(Array{Float64, 1}, df[:,1]),
+                     convert(Array{Float64, 1}, df[:,2]),
+                     convert(Array{Float64, 1}, df[:,3]),
+                     convert(Array{Float64, 1}, df[:,4]))
 end
 
 """
@@ -97,27 +98,43 @@ function QFval(targets_deltaR::Vector{Float64}, HansenP::HansenParameters)
 end
 
 """
-    minimumRED(path_to_parameters::String [; tol::Real=1e-2,
-                 optimizer::NelderMead, max_iter::Int=1000, kwargs...])
+    minimumRED(path_to_parameters::String, tol::Real=1e-2,
+                 optimizer::UnionAll=Optim.NelderMead,
+                 max_iter::Int=1000,
+                 random_guess::Bool=false[; kwargs...])
 
 Find minimum values of the hansen solubility parameters and RED.
+
+# Examples
+```jldoctest
+# path to file
+path_to_parameters = "path/to/file.csv"
+RED, MinimumHansenP = minimumRED(path_to_parameters);
+```
 """
 
-function minimumRED(path_to_parameters::String; tol::Real=1e-2,
-                       optimizer=Optim.NelderMead, max_iter::Int=1000, kwargs...)
+function minimumRED(path_to_parameters::String=""; tol::Real=1e-2,
+                       optimizer=Optim.NelderMead, max_iter::Int=1000,
+                       random_guess=false, kwargs...)
     verbosity = 0
-    random_guess = false
+    pre_loaded = nothing
     for (p,v) in kwargs
         if p == :verbosity
             verbosity = v
-        elseif p == :random_guess
-            random_guess = v
-        elseif p == :max_iter
-            max_iter = v
+        elseif p == :data
+            pre_loaded = v
         end
     end
-    # load the given hasen parameters
-    HansenP = load_parameters(path_to_parameters; kwargs...)
+    # if the user already gives the preloaded data
+    if pre_loaded != nothing
+        HansenP = HansenParameters(convert(Array{Float64,1}, pre_loaded[:,1]),
+                    convert(Array{Float64,1}, pre_loaded[:,2]),
+                    convert(Array{Float64,1}, pre_loaded[:,3]),
+                    convert(Array{Float64,1}, pre_loaded[:,4]))
+    else
+        # load the given hasen parameters
+        HansenP = load_parameters(path_to_parameters; kwargs...)
+    end
     if verbosity == 1
         println("Parameters loaded.")
     end
@@ -166,8 +183,11 @@ function minimumRED(path_to_parameters::String; tol::Real=1e-2,
     R_a = sqrt.(4*diff_params[1].^2 + diff_params[2].^2 + diff_params[3].^2)
     # calculate RED
     RED_values = R_a ./ MinimumHansenP.R_o
-    println("R_o")
+    print("\n")
+    println("===================")
+    print("R_o value: ")
     println(MinimumHansenP.R_o)
+    println("===================")
     println("Other values")
     df = DataFrame(RED = RED_values, δ_d = HansenP.delta_d, δ_p = HansenP.delta_p,
                     δ_h = HansenP.delta_h)
