@@ -1,5 +1,7 @@
 HSP - Hansen Solubility Parameter
 =========
+[![Build Status](https://travis-ci.org/chronchi/HSP.jl.svg?branch=master)](https://travis-ci.org/chronchi/HSP.jl)
+[![Coverage Status](https://coveralls.io/repos/github/chronchi/HSP.jl/badge.svg?branch=master)](https://coveralls.io/github/chronchi/HSP.jl?branch=master)
 
 Package that provides functions to calculate the
 [HSPs](https://en.wikipedia.org/wiki/Hansen_solubility_parameter) given a file
